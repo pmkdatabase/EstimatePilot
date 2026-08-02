@@ -2,7 +2,7 @@ from flask import Flask, render_template, redirect, url_for, flash, request, abo
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import csv, io, os, secrets
 from models import db, User, Customer, Material, Estimate, EstimateLineItem, Job, JobCostEntry
 
@@ -627,6 +627,68 @@ def seed_demo():
     db.session.add(EstimateLineItem(estimate_id=est2.id, material_id=materials[2].id,
                                      description="Mineral Wool Pipe Insulation",
                                      quantity=850, unit_cost=4.10))
+
+    # --- Coastal Medical Plaza — roof replacement, underway ---
+    cust_a = Customer(name="Coastal Medical Plaza", email="facilities@coastalmedplaza.com",
+                       phone="555-0198", address="120 Harbor Rd, Coastal City")
+    db.session.add(cust_a)
+    db.session.flush()
+
+    est_a = Estimate(customer_id=cust_a.id, created_by=estimator.id,
+                      title="Roof Replacement — East Wing", status="approved",
+                      markup_percent=20, tax_rate=7.5)
+    db.session.add(est_a)
+    db.session.flush()
+    db.session.add_all([
+        EstimateLineItem(estimate_id=est_a.id, material_id=materials[0].id, description="TPO Roofing Membrane",
+                          quantity=5200, unit_cost=2.85),
+        EstimateLineItem(estimate_id=est_a.id, material_id=materials[1].id, description="Roof Insulation Board",
+                          quantity=5200, unit_cost=1.40),
+        EstimateLineItem(estimate_id=est_a.id, material_id=materials[4].id, description="Install labor",
+                          quantity=110, unit_cost=48.00, is_labor=True),
+    ])
+    job_a = Job(estimate_id=est_a.id, customer_id=cust_a.id, assigned_installer_id=installer.id,
+                status="in_progress", crew_size=4,
+                site_notes="Roof access via freight elevator. Hospital in operation — quiet hours 6am-8am.",
+                scheduled_date=date.today() + timedelta(days=3), start_date=date.today())
+    db.session.add(job_a)
+    db.session.flush()
+    db.session.add_all([
+        JobCostEntry(job_id=job_a.id, material_id=materials[0].id, category="material", description="TPO Roofing Membrane",
+                     quantity=2800, unit_cost=2.85, amount=round(2800 * 2.85, 2), entered_by=installer.id),
+        JobCostEntry(job_id=job_a.id, material_id=materials[4].id, category="labor", description="Week 1 install",
+                     quantity=48, unit_cost=48.00, amount=round(48 * 48.00, 2), entered_by=installer.id),
+    ])
+
+    # --- Northside Business Park — insulation retrofit, underway ---
+    cust_b = Customer(name="Northside Business Park", email="ops@northsidebp.com",
+                       phone="555-0173", address="88 Commerce Way, Northside")
+    db.session.add(cust_b)
+    db.session.flush()
+
+    est_b = Estimate(customer_id=cust_b.id, created_by=estimator.id,
+                      title="Insulation Retrofit — Warehouse 3", status="approved",
+                      markup_percent=15, tax_rate=7.5)
+    db.session.add(est_b)
+    db.session.flush()
+    db.session.add_all([
+        EstimateLineItem(estimate_id=est_b.id, material_id=materials[2].id, description="Mineral Wool Pipe Insulation",
+                          quantity=1400, unit_cost=4.10),
+        EstimateLineItem(estimate_id=est_b.id, material_id=materials[3].id, description="Insulation Jacketing (Aluminum)",
+                          quantity=900, unit_cost=1.95),
+        EstimateLineItem(estimate_id=est_b.id, material_id=materials[5].id, description="Install labor",
+                          quantity=60, unit_cost=45.00, is_labor=True),
+    ])
+    job_b = Job(estimate_id=est_b.id, customer_id=cust_b.id, assigned_installer_id=installer.id,
+                status="in_progress", crew_size=2,
+                site_notes="Warehouse operating during install — coordinate with site manager for forklift traffic.",
+                scheduled_date=date.today() + timedelta(days=1), start_date=date.today())
+    db.session.add(job_b)
+    db.session.flush()
+    db.session.add(
+        JobCostEntry(job_id=job_b.id, material_id=materials[2].id, category="material", description="Mineral Wool Pipe Insulation",
+                     quantity=500, unit_cost=4.10, amount=round(500 * 4.10, 2), entered_by=installer.id)
+    )
 
     db.session.commit()
     print("Demo data seeded.")
