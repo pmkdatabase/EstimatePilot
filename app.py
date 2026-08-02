@@ -635,8 +635,9 @@ def seed_demo():
     print("  installer@demo.com / Installer@2026!")
 
 
+with app.app_context():
+    db.create_all()
+    seed_demo()
+
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-        seed_demo()
     app.run(debug=True)
