@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}— New Estimate{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card p-4">
+      <h4 class="fw-bold mb-4">New estimate</h4>
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label">Customer</label>
+          <select name="customer_id" class="form-select" required>
+            {% for c in customers %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Title</label>
+          <input type="text" name="title" class="form-control" placeholder="e.g. Roof Replacement — Building A" required>
+        </div>
+        <button class="btn btn-success w-100">Create & add line items</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

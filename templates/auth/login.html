@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}— Login{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-4">
+
+    <div class="alert alert-info small mb-3">
+      <strong>Demo credentials</strong><br>
+      Owner: owner@demo.com / Owner@2026!<br>
+      Estimator: estimator@demo.com / Estimator@2026!<br>
+      Installer: installer@demo.com / Installer@2026!
+    </div>
+
+    <div class="card p-4">
+      <h4 class="mb-4 fw-bold">Sign in</h4>
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-control" required autofocus>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" class="form-control" required>
+        </div>
+        <button class="btn btn-success w-100">Sign in</button>
+      </form>
+      <p class="text-center mb-0 small text-muted">Accounts are created by the owner — see Users after signing in.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

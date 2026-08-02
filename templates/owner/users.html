@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}— Users{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-md-5">
+    <div class="card p-4">
+      <h6 class="fw-bold mb-3">Add user</h6>
+      <form method="POST">
+        <div class="mb-2">
+          <label class="form-label small">Full name</label>
+          <input type="text" name="full_name" class="form-control" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Email</label>
+          <input type="email" name="email" class="form-control" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Password</label>
+          <input type="password" name="password" class="form-control" required minlength="6">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small">Role</label>
+          <select name="role" class="form-select">
+            <option value="estimator">Estimator</option>
+            <option value="owner">Owner</option>
+            <option value="installer">Installer</option>
+          </select>
+        </div>
+        <button class="btn btn-success w-100">Add user</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card p-4">
+      <h6 class="fw-bold mb-3">Team</h6>
+      <table class="table table-sm table-hover">
+        <thead class="table-light"><tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.full_name }}</td>
+            <td class="text-muted">{{ u.email }}</td>
+            <td><span class="badge bg-secondary text-uppercase">{{ u.role }}</span></td>
+            <td class="text-muted small">{{ u.created_at.strftime('%d %b %Y') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

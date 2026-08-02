@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}— Customers{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-md-5">
+    <div class="card p-4">
+      <h6 class="fw-bold mb-3">Add customer</h6>
+      <form method="POST">
+        <div class="mb-2">
+          <label class="form-label small">Name</label>
+          <input type="text" name="name" class="form-control" required>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Email</label>
+          <input type="email" name="email" class="form-control">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Phone</label>
+          <input type="text" name="phone" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small">Address</label>
+          <input type="text" name="address" class="form-control">
+        </div>
+        <button class="btn btn-success w-100">Add customer</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card p-4">
+      <h6 class="fw-bold mb-3">Customers</h6>
+      <table class="table table-sm table-hover">
+        <thead class="table-light">
+          <tr><th>Name</th><th>Email</th><th>Phone</th><th>Estimates</th></tr>
+        </thead>
+        <tbody>
+          {% for c in customers %}
+          <tr>
+            <td><a href="{{ url_for('customer_detail', customer_id=c.id) }}">{{ c.name }}</a></td>
+            <td class="text-muted">{{ c.email or '—' }}</td>
+            <td class="text-muted">{{ c.phone or '—' }}</td>
+            <td>{{ c.estimates|length }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-muted">No customers yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

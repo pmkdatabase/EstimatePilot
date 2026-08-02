@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}— {{ job.estimate.title }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">{{ job.estimate.title }}</h4>
+    <div class="text-muted">{{ job.customer.name }} &middot; <span class="badge badge-{{ job.status }} text-uppercase">{{ job.status.replace('_', ' ') }}</span></div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('job_sheet', job_id=job.id) }}" class="btn btn-outline-secondary" target="_blank">
+      <i class="bi bi-printer"></i> Installer sheet
+    </a>
+    {% if current_user.is_role('owner', 'estimator') %}
+      <a href="{{ url_for('job_setup', job_id=job.id) }}" class="btn btn-outline-primary">
+        {{ 'Edit job setup' if job.is_setup else 'Complete job setup' }}
+      </a>
+    {% endif %}
+    {% if job.status != 'complete' %}
+      <form method="POST" action="{{ url_for('job_set_status', job_id=job.id, action='complete') }}">
+        <button class="btn btn-success">Mark complete</button>
+      </form>
+    {% else %}
+      <form method="POST" action="{{ url_for('job_set_status', job_id=job.id, action='reopen') }}">
+        <button class="btn btn-outline-secondary">Reopen</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if not job.is_setup %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle"></i> This job hasn't been set up yet — crew size and target date are missing.
+  {% if current_user.is_role('owner', 'estimator') %}
+    <a href="{{ url_for('job_setup', job_id=job.id) }}">Set it up now</a>.
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    {% if job.is_setup %}
+    <div class="card p-4 mb-4">
+      <h6 class="fw-bold mb-3">Job setup</h6>
+      <div class="row">
+        <div class="col-md-6 mb-2"><span class="text-muted small">Crew size</span><div class="fw-bold">{{ job.crew_size }}</div></div>
+        <div class="col-md-6 mb-2"><span class="text-muted small">Target start</span><div class="fw-bold">{{ job.scheduled_date.strftime('%d %b %Y') if job.scheduled_date else '—' }}</div></div>
+      </div>
+      {% if job.site_notes %}
+        <div class="text-muted small">Site notes</div>
+        <div>{{ job.site_notes }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+    <div class="card p-4 mb-4">
+      <h6 class="fw-bold mb-3">Log a cost</h6>
+      <form method="POST" action="{{ url_for('job_add_cost', job_id=job.id) }}" id="cost-form">
+        <div class="row g-2 mb-2">
+          <div class="col-md-7">
+            <label class="form-label small">Material / labor rate</label>
+            <select class="form-select" id="cost-material-select" name="material_id">
+              <option value="" data-labor="">Other (no catalog item)…</option>
+              <optgroup label="Materials">
+                {% for m in materials if not m.is_labor %}
+                  <option value="{{ m.id }}" data-unit-cost="{{ m.unit_cost }}" data-unit="{{ m.unit }}"
+                          data-name="{{ m.name }}" data-labor="0">
+                    {{ m.name }} (${{ "%.2f"|format(m.unit_cost) }}/{{ m.unit }})
+                  </option>
+                {% endfor %}
+              </optgroup>
+              <optgroup label="Labor rates">
+                {% for m in materials if m.is_labor %}
+                  <option value="{{ m.id }}" data-unit-cost="{{ m.unit_cost }}" data-unit="{{ m.unit }}"
+                          data-name="{{ m.name }}" data-labor="1">
+                    {{ m.name }} (${{ "%.2f"|format(m.unit_cost) }}/hr)
+                  </option>
+                {% endfor %}
+              </optgroup>
+            </select>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label small">Description</label>
+            <input type="text" class="form-control" id="cost-description-input" name="description" placeholder="Optional note">
+          </div>
+        </div>
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label small" id="cost-quantity-label"><span id="cost-quantity-word">Quantity</span> <span id="cost-unit-label" class="text-muted"></span></label>
+            <input type="number" step="0.01" min="0.01" class="form-control" id="cost-quantity-input" name="quantity" placeholder="e.g. 1">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small" id="cost-amount-label">Amount ($)</label>
+            <input type="number" step="0.01" min="0.01" class="form-control" id="cost-amount-input" name="amount" placeholder="e.g. 250.00">
+          </div>
+          <div class="col-md-4">
+            <button class="btn btn-success w-100">Log</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="card p-4">
+      <h6 class="fw-bold mb-3">Cost entries</h6>
+      <table class="table table-sm">
+        <thead class="table-light">
+          <tr><th>Date</th><th>Category</th><th>Description</th><th>Qty</th><th>Amount</th><th>By</th></tr>
+        </thead>
+        <tbody>
+          {% for c in job.cost_entries %}
+          <tr>
+            <td class="text-muted small">{{ c.created_at.strftime('%d %b %Y') }}</td>
+            <td class="text-muted text-capitalize">{{ c.category }}</td>
+            <td>{{ c.description }}</td>
+            <td class="text-muted">{{ (c.quantity|string + ' ' + (c.material.unit if c.material else '')) if c.quantity else '—' }}</td>
+            <td class="fw-bold">${{ "%.2f"|format(c.amount) }}</td>
+            <td class="text-muted small">{{ c.author.full_name }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-muted">No costs logged yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card p-4 mb-4">
+      <h6 class="fw-bold mb-3">Job costing summary</h6>
+      <div class="d-flex justify-content-between mb-1"><span class="text-muted">Budget (revenue)</span><span>${{ "%.2f"|format(job.estimate.revenue) }}</span></div>
+      <div class="d-flex justify-content-between mb-1"><span class="text-muted">Actual cost</span><span>${{ "%.2f"|format(job.actual_cost) }}</span></div>
+      <hr>
+      <div class="d-flex justify-content-between fs-5 fw-bold">
+        <span>Profit</span>
+        <span class="{{ 'profit-positive' if job.profit >= 0 else 'profit-negative' }}">${{ "%.2f"|format(job.profit) }}</span>
+      </div>
+      <div class="text-muted small text-end">{{ job.margin_percent }}% margin</div>
+    </div>
+
+    <div class="card p-4">
+      <h6 class="fw-bold mb-3">Estimated vs. actual usage</h6>
+      <table class="table table-sm">
+        <thead class="table-light">
+          <tr><th>Item</th><th class="text-nowrap">Est.</th><th class="text-nowrap">Actual</th><th class="text-nowrap">Est. $</th><th class="text-nowrap">Actual $</th></tr>
+        </thead>
+        <tbody>
+          {% for row in job.usage_rows() %}
+          <tr>
+            <td>{{ row.description }}</td>
+            <td class="text-nowrap">{{ row.est_qty|round(2) }} {{ row.unit }}</td>
+            <td class="text-nowrap">
+              {% if row.trackable %}
+                {% set diff = row.actual_qty - row.est_qty %}
+                <span class="{{ 'profit-negative' if diff > 0 else '' }}">{{ row.actual_qty|round(2) }} {{ row.unit }}</span>
+              {% else %}
+                <span class="text-muted">not tracked</span>
+              {% endif %}
+            </td>
+            <td class="text-nowrap">${{ "%.2f"|format(row.est_amount) }}</td>
+            <td class="text-nowrap">{{ "$%.2f"|format(row.actual_amount) if row.trackable else '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-muted">No line items on this estimate.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="text-muted small">Red actual quantity = used more than estimated. "Other" cost entries (permits, rentals, etc.) aren't tied to a catalog item so they don't appear here — see Cost entries for the full list.</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const costMaterialSelect = document.getElementById('cost-material-select');
+  const costDescriptionInput = document.getElementById('cost-description-input');
+  const costQuantityInput = document.getElementById('cost-quantity-input');
+  const costQuantityWord = document.getElementById('cost-quantity-word');
+  const costUnitLabel = document.getElementById('cost-unit-label');
+  const costAmountInput = document.getElementById('cost-amount-input');
+  const costAmountLabel = document.getElementById('cost-amount-label');
+
+  costMaterialSelect.addEventListener('change', () => {
+    const opt = costMaterialSelect.options[costMaterialSelect.selectedIndex];
+    if (opt.value) {
+      const isLabor = opt.dataset.labor === '1';
+      costQuantityWord.textContent = isLabor ? 'Hours worked' : 'Quantity';
+      costUnitLabel.textContent = isLabor ? '' : '(' + opt.dataset.unit + ')';
+      costQuantityInput.placeholder = isLabor ? 'e.g. 8' : 'e.g. 1';
+      costQuantityInput.required = true;
+      costDescriptionInput.placeholder = opt.dataset.name;
+      costAmountInput.value = '';
+      costAmountInput.required = false;
+      costAmountInput.readOnly = true;
+      costAmountLabel.textContent = 'Amount ($) — auto';
+      updateCostAmountPreview();
+    } else {
+      costQuantityWord.textContent = 'Quantity';
+      costUnitLabel.textContent = '';
+      costQuantityInput.placeholder = 'e.g. 1';
+      costQuantityInput.required = false;
+      costQuantityInput.value = '';
+      costDescriptionInput.placeholder = 'Optional note';
+      costAmountInput.readOnly = false;
+      costAmountInput.required = true;
+      costAmountLabel.textContent = 'Amount ($)';
+    }
+  });
+
+  function updateCostAmountPreview() {
+    const opt = costMaterialSelect.options[costMaterialSelect.selectedIndex];
+    if (!opt.value) return;
+    const qty = parseFloat(costQuantityInput.value) || 0;
+    const rate = parseFloat(opt.dataset.unitCost) || 0;
+    costAmountInput.value = (qty * rate).toFixed(2);
+  }
+  costQuantityInput.addEventListener('input', updateCostAmountPreview);
+</script>
+{% endblock %}

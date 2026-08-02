@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}— Reports{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0">Reports</h4>
+  <a href="{{ url_for('owner_reports_export_csv') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-download"></i> Export all jobs (CSV)
+  </a>
+</div>
+
+<div class="card p-4">
+  <h6 class="fw-bold mb-3">Customers — lifetime value</h6>
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr><th>Customer</th><th>Estimates</th><th>Lifetime revenue</th><th>Lifetime actual cost</th><th>Lifetime profit</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for c in customers %}
+      <tr>
+        <td>{{ c.name }}</td>
+        <td>{{ c.estimates|length }}</td>
+        <td>${{ "%.2f"|format(c.lifetime_revenue) }}</td>
+        <td>${{ "%.2f"|format(c.lifetime_actual_cost) }}</td>
+        <td class="fw-bold {{ 'profit-positive' if c.lifetime_profit >= 0 else 'profit-negative' }}">${{ "%.2f"|format(c.lifetime_profit) }}</td>
+        <td class="text-end"><a href="{{ url_for('customer_detail', customer_id=c.id) }}" class="btn btn-sm btn-outline-secondary">Open</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-muted">No customers yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

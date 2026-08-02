@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}— {{ estimate.title }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">{{ estimate.title }}</h4>
+    <div class="text-muted">{{ estimate.customer.name }} &middot; <span class="badge badge-{{ estimate.status }} text-uppercase">{{ estimate.status }}</span></div>
+  </div>
+  <div class="d-flex gap-2">
+    {% if estimate.status == 'draft' %}
+      <form method="POST" action="{{ url_for('estimate_set_status', estimate_id=estimate.id, action='send') }}">
+        <button class="btn btn-outline-primary">Mark as sent</button>
+      </form>
+    {% endif %}
+    {% if estimate.status in ('draft', 'sent') %}
+      <form method="POST" action="{{ url_for('estimate_set_status', estimate_id=estimate.id, action='approve') }}">
+        <button class="btn btn-success">Approve &rarr; create job</button>
+      </form>
+      <form method="POST" action="{{ url_for('estimate_set_status', estimate_id=estimate.id, action='reject') }}">
+        <button class="btn btn-outline-danger">Reject</button>
+      </form>
+    {% endif %}
+    {% if estimate.job %}
+      <a href="{{ url_for('job_detail', job_id=estimate.job.id) }}" class="btn btn-outline-secondary">View job</a>
+    {% endif %}
+    {% if estimate.status == 'draft' %}
+      <form method="POST" action="{{ url_for('estimate_delete', estimate_id=estimate.id) }}"
+            onsubmit="return confirm('Delete this draft estimate? This cannot be undone.');">
+        <button class="btn btn-outline-danger"><i class="bi bi-trash"></i> Delete draft</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    {% if estimate.status == 'draft' %}
+    <div class="card p-4 mb-4">
+      <h6 class="fw-bold mb-3">Add line item</h6>
+      <form method="POST" action="{{ url_for('estimate_add_line', estimate_id=estimate.id) }}" class="row g-2 align-items-end" id="line-item-form">
+        <div class="col-md-3">
+          <label class="form-label small">Material / labor rate</label>
+          <select class="form-select" id="material-select" name="material_id">
+            <option value="">Custom line…</option>
+            <optgroup label="Materials">
+              {% for m in materials if not m.is_labor %}
+                <option value="{{ m.id }}" data-unit-cost="{{ m.unit_cost }}" data-unit="{{ m.unit }}"
+                        data-name="{{ m.name }}" data-labor="0">
+                  {{ m.name }} (${{ "%.2f"|format(m.unit_cost) }}/{{ m.unit }})
+                </option>
+              {% endfor %}
+            </optgroup>
+            <optgroup label="Labor rates">
+              {% for m in materials if m.is_labor %}
+                <option value="{{ m.id }}" data-unit-cost="{{ m.unit_cost }}" data-unit="{{ m.unit }}"
+                        data-name="{{ m.name }}" data-labor="1">
+                  {{ m.name }} (${{ "%.2f"|format(m.unit_cost) }}/hr)
+                </option>
+              {% endfor %}
+            </optgroup>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Description</label>
+          <input type="text" class="form-control" id="description-input" name="description" placeholder="Custom description">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small" id="quantity-label"><span id="quantity-word">Quantity</span> <span id="unit-label" class="text-muted"></span></label>
+          <input type="number" step="0.01" min="0.01" class="form-control" id="quantity-input" name="quantity"
+                 placeholder="e.g. 1" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Unit cost ($)</label>
+          <input type="number" step="0.01" min="0" class="form-control" id="unit-cost-input" name="unit_cost" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Line total</label>
+          <div class="form-control-plaintext fw-bold" id="line-total-preview">$0.00</div>
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="is_labor" id="is-labor-check">
+            <label class="form-check-label small" for="is-labor-check">This is a labor line</label>
+            <span class="text-muted small" id="is-labor-hint"></span>
+          </div>
+        </div>
+        <div class="col-12">
+          <button class="btn btn-success">Add line item</button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="card p-4">
+      <h6 class="fw-bold mb-3">Line items</h6>
+      <table class="table table-sm">
+        <thead class="table-light">
+          <tr><th>Description</th><th>Qty</th><th>Unit cost</th><th>Line total</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for li in estimate.line_items %}
+          <tr>
+            <td>{{ li.description }} {% if li.is_labor %}<span class="badge bg-secondary">labor</span>{% endif %}</td>
+            <td>{{ li.quantity }}</td>
+            <td>${{ "%.2f"|format(li.unit_cost) }}</td>
+            <td class="fw-bold">${{ "%.2f"|format(li.line_total) }}</td>
+            <td class="text-end">
+              {% if estimate.status == 'draft' %}
+              <form method="POST" action="{{ url_for('estimate_delete_line', estimate_id=estimate.id, line_id=li.id) }}">
+                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-muted">No line items yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card p-4 mb-4">
+      <h6 class="fw-bold mb-3">Pricing</h6>
+      <form method="POST" action="{{ url_for('estimate_update_pricing', estimate_id=estimate.id) }}" id="pricing-form">
+        <div class="mb-2">
+          <label class="form-label small">Markup %</label>
+          <input type="number" step="0.1" min="0" class="form-control" name="markup_percent" id="markup-input"
+                 value="{{ estimate.markup_percent }}" {{ 'readonly' if estimate.status != 'draft' }}>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small">Tax rate %</label>
+          <input type="number" step="0.1" min="0" class="form-control" name="tax_rate" id="tax-input"
+                 value="{{ estimate.tax_rate }}" {{ 'readonly' if estimate.status != 'draft' }}>
+        </div>
+        {% if estimate.status == 'draft' %}
+        <button class="btn btn-outline-success w-100 btn-sm">Update pricing</button>
+        {% endif %}
+      </form>
+    </div>
+
+    <div class="card p-4">
+      <h6 class="fw-bold mb-3">Summary</h6>
+      <div class="d-flex justify-content-between mb-1"><span class="text-muted">Subtotal</span><span id="summary-subtotal">${{ "%.2f"|format(estimate.subtotal) }}</span></div>
+      <div class="d-flex justify-content-between mb-1"><span class="text-muted">Revenue (after markup)</span><span id="summary-revenue">${{ "%.2f"|format(estimate.revenue) }}</span></div>
+      <div class="d-flex justify-content-between mb-1"><span class="text-muted">Tax</span><span id="summary-tax">${{ "%.2f"|format(estimate.tax_amount) }}</span></div>
+      <hr>
+      <div class="d-flex justify-content-between fs-5 fw-bold"><span>Total</span><span id="summary-total">${{ "%.2f"|format(estimate.total) }}</span></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const materialSelect = document.getElementById('material-select');
+  const descriptionInput = document.getElementById('description-input');
+  const quantityInput = document.getElementById('quantity-input');
+  const unitCostInput = document.getElementById('unit-cost-input');
+  const unitLabel = document.getElementById('unit-label');
+  const quantityWord = document.getElementById('quantity-word');
+  const lineTotalPreview = document.getElementById('line-total-preview');
+  const isLaborCheck = document.getElementById('is-labor-check');
+  const isLaborHint = document.getElementById('is-labor-hint');
+
+  function updateLineTotalPreview() {
+    if (!lineTotalPreview) return;
+    const qty = parseFloat(quantityInput.value) || 0;
+    const cost = parseFloat(unitCostInput.value) || 0;
+    lineTotalPreview.textContent = '$' + (qty * cost).toFixed(2);
+  }
+
+  if (materialSelect) {
+    materialSelect.addEventListener('change', () => {
+      const opt = materialSelect.options[materialSelect.selectedIndex];
+      if (opt.value) {
+        unitCostInput.value = opt.dataset.unitCost;
+        descriptionInput.value = opt.dataset.name;
+        descriptionInput.placeholder = opt.dataset.name;
+        const isLabor = opt.dataset.labor === '1';
+        isLaborCheck.checked = isLabor;
+        isLaborCheck.disabled = true;
+        isLaborHint.textContent = isLabor ? '(set automatically — labor rate selected)' : '(set automatically — material selected)';
+        if (isLabor) {
+          quantityWord.textContent = 'Hours worked';
+          quantityInput.placeholder = 'e.g. 8';
+          unitLabel.textContent = '';
+        } else {
+          quantityWord.textContent = 'Quantity';
+          unitLabel.textContent = '(' + opt.dataset.unit + ')';
+          quantityInput.placeholder = 'e.g. 1';
+        }
+      } else {
+        quantityWord.textContent = 'Quantity';
+        unitLabel.textContent = '';
+        quantityInput.placeholder = 'e.g. 1';
+        descriptionInput.value = '';
+        descriptionInput.placeholder = 'Custom description';
+        isLaborCheck.disabled = false;
+        isLaborCheck.checked = false;
+        isLaborHint.textContent = '';
+      }
+      updateLineTotalPreview();
+    });
+    quantityInput.addEventListener('input', updateLineTotalPreview);
+    unitCostInput.addEventListener('input', updateLineTotalPreview);
+  }
+
+  // Live-recalculate the summary card as markup / tax are edited, before saving.
+  const subtotal = {{ estimate.subtotal }};
+  const markupInput = document.getElementById('markup-input');
+  const taxInput = document.getElementById('tax-input');
+
+  function updateSummaryPreview() {
+    const markup = parseFloat(markupInput.value) || 0;
+    const tax = parseFloat(taxInput.value) || 0;
+    const revenue = subtotal * (1 + markup / 100);
+    const taxAmount = revenue * (tax / 100);
+    const total = revenue + taxAmount;
+    document.getElementById('summary-revenue').textContent = '$' + revenue.toFixed(2);
+    document.getElementById('summary-tax').textContent = '$' + taxAmount.toFixed(2);
+    document.getElementById('summary-total').textContent = '$' + total.toFixed(2);
+  }
+
+  if (markupInput && !markupInput.readOnly) {
+    markupInput.addEventListener('input', updateSummaryPreview);
+    taxInput.addEventListener('input', updateSummaryPreview);
+  }
+</script>
+{% endblock %}

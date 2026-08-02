@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}— Schedule{% endblock %}
+{% block content %}
+<h4 class="fw-bold mb-4">Schedule</h4>
+
+{% if unscheduled %}
+<div class="card p-4 mb-4">
+  <h6 class="fw-bold mb-3"><i class="bi bi-exclamation-triangle text-warning"></i> Unscheduled</h6>
+  <table class="table table-sm table-hover align-middle">
+    <thead class="table-light">
+      <tr><th>Job</th><th>Customer</th><th>Installer</th>{% if current_user.is_role('owner', 'estimator') %}<th>Set date</th>{% endif %}<th></th></tr>
+    </thead>
+    <tbody>
+      {% for j in unscheduled %}
+      <tr>
+        <td>{{ j.estimate.title }}</td>
+        <td class="text-muted">{{ j.customer.name }}</td>
+        <td class="text-muted">{{ j.installer.full_name if j.installer else '—' }}</td>
+        {% if current_user.is_role('owner', 'estimator') %}
+        <td>
+          <form method="POST" action="{{ url_for('job_reschedule', job_id=j.id) }}" class="d-flex gap-1">
+            <input type="date" name="scheduled_date" class="form-control form-control-sm" required>
+            <button class="btn btn-sm btn-outline-secondary">Set</button>
+          </form>
+        </td>
+        {% endif %}
+        <td class="text-end"><a href="{{ url_for('job_detail', job_id=j.id) }}" class="btn btn-sm btn-outline-secondary">Open</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% for sched_date, jobs in schedule_groups %}
+<div class="card p-4 mb-4">
+  <h6 class="fw-bold mb-3">{{ sched_date.strftime('%A, %d %b %Y') }}</h6>
+  <table class="table table-sm table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Job</th><th>Customer</th><th>Crew</th><th>Installer</th><th>Status</th>
+        {% if current_user.is_role('owner', 'estimator') %}<th>Reschedule</th>{% endif %}
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for j in jobs %}
+      <tr>
+        <td>{{ j.estimate.title }}</td>
+        <td class="text-muted">{{ j.customer.name }}</td>
+        <td>{{ j.crew_size or '—' }}</td>
+        <td class="text-muted">{{ j.installer.full_name if j.installer else '—' }}</td>
+        <td><span class="badge badge-{{ j.status }} text-uppercase">{{ j.status.replace('_', ' ') }}</span></td>
+        {% if current_user.is_role('owner', 'estimator') %}
+        <td>
+          <form method="POST" action="{{ url_for('job_reschedule', job_id=j.id) }}" class="d-flex gap-1">
+            <input type="date" name="scheduled_date" class="form-control form-control-sm" value="{{ j.scheduled_date.isoformat() }}">
+            <button class="btn btn-sm btn-outline-secondary">Save</button>
+          </form>
+        </td>
+        {% endif %}
+        <td class="text-end">
+          <a href="{{ url_for('job_sheet', job_id=j.id) }}" class="btn btn-sm btn-outline-primary" target="_blank">Sheet</a>
+          <a href="{{ url_for('job_detail', job_id=j.id) }}" class="btn btn-sm btn-outline-secondary">Open</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  {% if not unscheduled %}
+  <div class="card p-4 text-muted">No upcoming jobs.</div>
+  {% endif %}
+{% endfor %}
+{% endblock %}

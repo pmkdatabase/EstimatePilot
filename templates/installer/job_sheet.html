@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}— Installer Sheet{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 no-print">
+  <a href="{{ url_for('job_detail', job_id=job.id) }}" class="btn btn-outline-secondary btn-sm">&larr; Back to job</a>
+  <button class="btn btn-primary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+</div>
+
+<div class="card p-4 sheet-card">
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+      <h3 class="fw-bold mb-1">Installer Work Order</h3>
+      <div class="text-muted">{{ job.estimate.title }}</div>
+    </div>
+    <span class="badge badge-{{ job.status }} text-uppercase fs-6">{{ job.status.replace('_', ' ') }}</span>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <h6 class="fw-bold text-uppercase small text-muted">Customer</h6>
+      <div class="fw-bold">{{ job.customer.name }}</div>
+      <div>{{ job.customer.address or 'No address on file' }}</div>
+      <div>{{ job.customer.phone or '' }}</div>
+    </div>
+    <div class="col-md-6">
+      <h6 class="fw-bold text-uppercase small text-muted">Schedule</h6>
+      <div><strong>Date:</strong> {{ job.scheduled_date.strftime('%A, %d %b %Y') if job.scheduled_date else 'Not scheduled' }}</div>
+      <div><strong>Crew size:</strong> {{ job.crew_size or '—' }}</div>
+      <div><strong>Lead installer:</strong> {{ job.installer.full_name if job.installer else 'Unassigned' }}</div>
+    </div>
+  </div>
+
+  {% if job.site_notes %}
+  <div class="mb-4">
+    <h6 class="fw-bold text-uppercase small text-muted">Site notes / special instructions</h6>
+    <div>{{ job.site_notes }}</div>
+  </div>
+  {% endif %}
+
+  <h6 class="fw-bold text-uppercase small text-muted">Materials & labor</h6>
+  <table class="table table-sm">
+    <thead class="table-light"><tr><th>Description</th><th>Quantity</th></tr></thead>
+    <tbody>
+      {% for li in job.estimate.line_items %}
+      <tr>
+        <td>{{ li.description }} {% if li.is_labor %}<span class="badge bg-secondary">labor</span>{% endif %}</td>
+        <td>{{ li.quantity }} {{ li.material.unit if li.material else '' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="2" class="text-muted">No line items.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<style>
+  @media print {
+    .no-print, nav { display: none !important; }
+    body { background: white; }
+    .sheet-card { box-shadow: none !important; border: 1px solid #ccc !important; }
+  }
+</style>
+{% endblock %}

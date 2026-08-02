@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}— Jobs{% endblock %}
+{% block content %}
+<h4 class="fw-bold mb-4">Jobs</h4>
+
+<div class="card p-4">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Job</th><th>Customer</th><th>Status</th>
+        {% if current_user.is_role('owner', 'estimator') %}<th>Installer</th>{% endif %}
+        <th>Budget</th><th>Actual cost</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for j in jobs %}
+      <tr>
+        <td>
+          {{ j.estimate.title }}
+          {% if not j.is_setup %}<span class="badge bg-warning text-dark">needs setup</span>{% endif %}
+        </td>
+        <td class="text-muted">{{ j.customer.name }}</td>
+        <td><span class="badge badge-{{ j.status }} text-uppercase">{{ j.status.replace('_', ' ') }}</span></td>
+        {% if current_user.is_role('owner', 'estimator') %}
+        <td>
+          <form method="POST" action="{{ url_for('job_assign', job_id=j.id) }}" class="d-flex gap-1">
+            <select name="installer_id" class="form-select form-select-sm">
+              <option value="">Unassigned</option>
+              {% for i in installers %}
+                <option value="{{ i.id }}" {{ 'selected' if j.assigned_installer_id == i.id }}>{{ i.full_name }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn btn-sm btn-outline-secondary">Set</button>
+          </form>
+        </td>
+        {% endif %}
+        <td>${{ "%.2f"|format(j.estimate.revenue) }}</td>
+        <td>${{ "%.2f"|format(j.actual_cost) }}</td>
+        <td class="text-end">
+          <a href="{{ url_for('job_detail', job_id=j.id) }}" class="btn btn-sm btn-outline-secondary">Open</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-muted">No jobs yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

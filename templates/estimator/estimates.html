@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}— Estimates{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0">Estimates</h4>
+  <a href="{{ url_for('estimate_new') }}" class="btn btn-success"><i class="bi bi-plus-lg"></i> New estimate</a>
+</div>
+
+<div class="card p-4">
+  <table class="table table-hover">
+    <thead class="table-light">
+      <tr><th>Title</th><th>Customer</th><th>Status</th><th>Total</th><th>Created</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for e in estimates %}
+      <tr class="align-middle">
+        <td>{{ e.title }}</td>
+        <td class="text-muted">{{ e.customer.name }}</td>
+        <td><span class="badge badge-{{ e.status }} text-uppercase">{{ e.status }}</span></td>
+        <td class="fw-bold">${{ "%.2f"|format(e.total) }}</td>
+        <td class="text-muted small">{{ e.created_at.strftime('%d %b %Y') }}</td>
+        <td class="text-end">
+          <a href="{{ url_for('estimate_detail', estimate_id=e.id) }}" class="btn btn-sm btn-outline-secondary">Open</a>
+          {% if e.status == 'draft' %}
+          <form method="POST" action="{{ url_for('estimate_delete', estimate_id=e.id) }}" class="d-inline"
+                onsubmit="return confirm('Delete this draft estimate? This cannot be undone.');">
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-muted">No estimates yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

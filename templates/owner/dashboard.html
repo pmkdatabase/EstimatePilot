@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}— Profit Dashboard{% endblock %}
+{% block content %}
+<h4 class="fw-bold mb-4">Profit Dashboard</h4>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card p-3 text-center">
+      <div class="fs-2 fw-bold text-primary">${{ "%.0f"|format(total_revenue) }}</div>
+      <div class="text-muted small">Total revenue (booked jobs)</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 text-center">
+      <div class="fs-2 fw-bold text-secondary">${{ "%.0f"|format(total_cost) }}</div>
+      <div class="text-muted small">Total actual cost</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 text-center">
+      <div class="fs-2 fw-bold {{ 'profit-positive' if total_profit >= 0 else 'profit-negative' }}">${{ "%.0f"|format(total_profit) }}</div>
+      <div class="text-muted small">Total profit</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <a href="{{ url_for('estimates_list') }}" class="text-decoration-none">
+      <div class="card p-3 text-center">
+        <div class="fs-2 fw-bold text-warning">{{ open_estimates }}</div>
+        <div class="text-muted small">Open estimates</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div class="card p-4">
+  <h6 class="fw-bold mb-3">Jobs</h6>
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr><th>Job</th><th>Customer</th><th>Status</th><th>Revenue</th><th>Actual cost</th><th>Profit</th><th>Margin</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for j in jobs %}
+      <tr>
+        <td>{{ j.estimate.title }}</td>
+        <td class="text-muted">{{ j.customer.name }}</td>
+        <td><span class="badge badge-{{ j.status }} text-uppercase">{{ j.status.replace('_', ' ') }}</span></td>
+        <td>${{ "%.2f"|format(j.estimate.revenue) }}</td>
+        <td>${{ "%.2f"|format(j.actual_cost) }}</td>
+        <td class="fw-bold {{ 'profit-positive' if j.profit >= 0 else 'profit-negative' }}">${{ "%.2f"|format(j.profit) }}</td>
+        <td>{{ j.margin_percent }}%</td>
+        <td class="text-end"><a href="{{ url_for('job_detail', job_id=j.id) }}" class="btn btn-sm btn-outline-secondary">Open</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="text-muted">No jobs yet — approve an estimate to create one.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}— {{ customer.name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+  <div>
+    <h4 class="fw-bold mb-1">{{ customer.name }}</h4>
+    <div class="text-muted">
+      {{ customer.email or '' }}{% if customer.email and customer.phone %} &middot; {% endif %}{{ customer.phone or '' }}
+      {% if customer.address %} &middot; {{ customer.address }}{% endif %}
+    </div>
+  </div>
+  <a href="{{ url_for('customer_export_csv', customer_id=customer.id) }}" class="btn btn-outline-secondary">
+    <i class="bi bi-download"></i> Export CSV
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card p-3 text-center">
+      <div class="fs-2 fw-bold text-primary">{{ estimates|length }}</div>
+      <div class="text-muted small">Estimates</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 text-center">
+      <div class="fs-2 fw-bold">${{ "%.0f"|format(customer.lifetime_revenue) }}</div>
+      <div class="text-muted small">Lifetime revenue</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 text-center">
+      <div class="fs-2 fw-bold text-secondary">${{ "%.0f"|format(customer.lifetime_actual_cost) }}</div>
+      <div class="text-muted small">Lifetime actual cost</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 text-center">
+      <div class="fs-2 fw-bold {{ 'profit-positive' if customer.lifetime_profit >= 0 else 'profit-negative' }}">${{ "%.0f"|format(customer.lifetime_profit) }}</div>
+      <div class="text-muted small">Lifetime profit</div>
+    </div>
+  </div>
+</div>
+
+<div class="card p-4">
+  <h6 class="fw-bold mb-3">Estimate & job history</h6>
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr><th>Estimate</th><th>Status</th><th>Created</th><th>Total</th><th>Job status</th><th>Job profit</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for e in estimates %}
+      <tr>
+        <td>{{ e.title }}</td>
+        <td><span class="badge badge-{{ e.status }} text-uppercase">{{ e.status }}</span></td>
+        <td class="text-muted small">{{ e.created_at.strftime('%d %b %Y') }}</td>
+        <td class="fw-bold">${{ "%.2f"|format(e.total) }}</td>
+        <td>
+          {% if e.job %}
+            <span class="badge badge-{{ e.job.status }} text-uppercase">{{ e.job.status.replace('_', ' ') }}</span>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if e.job %}
+            <span class="{{ 'profit-positive' if e.job.profit >= 0 else 'profit-negative' }}">${{ "%.2f"|format(e.job.profit) }}</span>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td class="text-end">
+          <a href="{{ url_for('estimate_detail', estimate_id=e.id) }}" class="btn btn-sm btn-outline-secondary">Estimate</a>
+          {% if e.job %}
+            <a href="{{ url_for('job_detail', job_id=e.job.id) }}" class="btn btn-sm btn-outline-secondary">Job</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-muted">No estimates for this customer yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
